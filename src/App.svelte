@@ -1,47 +1,89 @@
 <script lang="ts">
-  import svelteLogo from './assets/svelte.svg'
-  import viteLogo from '/vite.svg'
-  import Counter from './lib/Counter.svelte'
+  import { faLightbulb } from "@fortawesome/free-solid-svg-icons";
+  import { max } from "lodash";
+  import { onMount } from "svelte";
+  import Fa from "svelte-fa";
+
+  const darkDelta = 2;
+
+  let model = [] as Array<string>;
+  let light = 100 - darkDelta;
+  let tArea: HTMLTextAreaElement;
+
+  $: if (tArea) {
+    let newCols = max(model.map((l) => l.length)) ?? 0;
+    tArea.cols = newCols >= tArea.cols ? newCols : tArea.cols;
+  }
+
+  onMount(() => {
+    model = load();
+    let med = window.matchMedia("(prefers-color-scheme: dark)");
+    if (med.matches) light = darkDelta;
+  });
+
+  function writeText(
+    event: Event & { currentTarget: EventTarget & HTMLTextAreaElement },
+  ) {
+    model = event.currentTarget.value.split("\n");
+    save();
+  }
+
+  function save() {
+    localStorage.setItem("colors", JSON.stringify(model));
+  }
+
+  function load() {
+    return JSON.parse(localStorage.getItem("colors") ?? "[]") as Array<string>;
+  }
+
+  function setLight(
+    event: Event & { currentTarget: EventTarget & HTMLInputElement },
+  ) {
+    light = Number.parseFloat(event.currentTarget.value) ?? 100 - darkDelta;
+  }
 </script>
 
-<main>
-  <div>
-    <a href="https://vitejs.dev" target="_blank" rel="noreferrer">
-      <img src={viteLogo} class="logo" alt="Vite Logo" />
-    </a>
-    <a href="https://svelte.dev" target="_blank" rel="noreferrer">
-      <img src={svelteLogo} class="logo svelte" alt="Svelte Logo" />
-    </a>
+<div class="fixed bottom-2 right-2 flex items-center gap-2">
+  <Fa icon={faLightbulb} primaryColor="hsl(0, 0%, {100 - light}%)" /><input
+    class="inline"
+    type="range"
+    min="0"
+    max="100"
+    step="1"
+    value={light}
+    on:input={setLight}
+  />
+</div>
+<main
+  class="flex items-center justify-center w-full h-screen"
+  style:background-color="hsl(0, 0%, {light}%)"
+>
+  <div class="relative">
+    <div class="absolute w-full h-full">
+      <pre class="font-mono">{#each model as l}<code style:color={l}
+            >{l}<br /></code
+          >{/each}</pre>
+    </div>
+    <div class="relative w-full h-full">
+      <textarea
+        class="font-mono text-transparent bg-transparent caret-white resize-none z-50"
+        rows={model.length}
+        spellcheck="false"
+        bind:this={tArea}
+        on:input={writeText}>{model.join("\n")}</textarea
+      >
+    </div>
   </div>
-  <h1>Vite + Svelte</h1>
-
-  <div class="card">
-    <Counter />
-  </div>
-
-  <p>
-    Check out <a href="https://github.com/sveltejs/kit#readme" target="_blank" rel="noreferrer">SvelteKit</a>, the official Svelte app framework powered by Vite!
-  </p>
-
-  <p class="read-the-docs">
-    Click on the Vite and Svelte logos to learn more
-  </p>
 </main>
 
 <style>
-  .logo {
-    height: 6em;
-    padding: 1.5em;
-    will-change: filter;
-    transition: filter 300ms;
+  :global(:root) {
+    box-sizing: border-box;
   }
-  .logo:hover {
-    filter: drop-shadow(0 0 2em #646cffaa);
-  }
-  .logo.svelte:hover {
-    filter: drop-shadow(0 0 2em #ff3e00aa);
-  }
-  .read-the-docs {
-    color: #888;
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root) {
+      color-scheme: dark;
+    }
   }
 </style>
